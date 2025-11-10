@@ -5,7 +5,7 @@
   "scripts": {
     "shopify": "shopify",
     "build": "shopify app build",
-    "dev": "shopify app dev",
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"green,blue\" \"cd server && yarn start:dev\" \"cd client && yarn dev\"",
     "info": "shopify app info",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy"
@@ -18,5 +18,8 @@
   "private": true,
   "workspaces": [
     "extensions/*"
-  ]
+  ],
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }
