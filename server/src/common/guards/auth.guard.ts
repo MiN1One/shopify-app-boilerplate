@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { RequestedTokenType, Session } from '@shopify/shopify-api';
 import { FastifyRequest } from 'fastify';
-import mongoose from 'mongoose';
+import { isDuplicateKeyError } from 'utils/db';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -36,7 +36,7 @@ export class AuthGuard implements CanActivate {
         scope: session.scope,
       });
     } catch (er) {
-      if (er instanceof mongoose.mongo.MongoServerError && er.code === 11000) {
+      if (isDuplicateKeyError(er)) {
         Logger.log('Session already exists', 'AuthGuard:createSession');
       } else {
         Logger.error(er, 'AuthGuard:createSession');
