@@ -95,4 +95,5 @@ server/public
 *.sw?
 
 # Shopify dev configuration
-*.dev.toml
+*.app.*.toml
+!shopify.app.toml

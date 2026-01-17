@@ -1,7 +1,10 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { RequestedTokenType } from '@shopify/shopify-api';
 import { FastifyRequest } from 'fastify';
 
 export const SessionToken = createParamDecorator(
-  (_data: unknown, context: ExecutionContext) =>
-    context.switchToHttp().getRequest<FastifyRequest>().session,
+  (
+    sessionType = RequestedTokenType.OnlineAccessToken,
+    context: ExecutionContext,
+  ) => context.switchToHttp().getRequest<FastifyRequest>()[sessionType],
 );

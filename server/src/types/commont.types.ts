@@ -1,7 +1,8 @@
-import { Session } from '@shopify/shopify-api';
+import { RequestedTokenType, Session } from '@shopify/shopify-api';
 
 declare module 'fastify' {
   interface FastifyRequest {
-    session: Session;
+    [RequestedTokenType.OfflineAccessToken]: Session;
+    [RequestedTokenType.OnlineAccessToken]: Session;
   }
 }

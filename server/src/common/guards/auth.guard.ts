@@ -1,3 +1,4 @@
+import { SessionService } from '@/modules/session/session.service';
 import { ShopifyService } from '@/modules/shopify/shopify.service';
 import {
   CanActivate,
@@ -5,12 +6,16 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { RequestedTokenType } from '@shopify/shopify-api';
+import { RequestedTokenType, Session } from '@shopify/shopify-api';
 import { FastifyRequest } from 'fastify';
+import mongoose from 'mongoose';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly shopifyService: ShopifyService) {}
+  constructor(
+    private readonly shopifyService: ShopifyService,
+    private readonly sessionService: SessionService,
+  ) {}
 
   static getSessionToken(request: FastifyRequest) {
     const authHeader = request.headers.authorization;
@@ -18,6 +23,48 @@ export class AuthGuard implements CanActivate {
       return authHeader.split('Bearer ')[1];
     }
     return (request.query as Record<string, string>).id_token;
+  }
+
+  async createSession(session: Session) {
+    try {
+      await this.sessionService.createSession({
+        accessToken: session.accessToken,
+        id: session.id,
+        shop: session.shop,
+        expires: session.expires?.toISOString(),
+        isOnline: session.isOnline,
+        scope: session.scope,
+      });
+    } catch (er) {
+      if (er instanceof mongoose.mongo.MongoServerError && er.code === 11000) {
+        Logger.log('Session already exists', 'AuthGuard:createSession');
+      } else {
+        Logger.error(er, 'AuthGuard:createSession');
+      }
+    }
+  }
+
+  async storeSession(
+    sessionToken: string,
+    shop: string,
+    request: FastifyRequest,
+  ) {
+    const sessionTypes = Object.values(
+      RequestedTokenType,
+    ) as RequestedTokenType[];
+    await Promise.all(
+      sessionTypes.map(async (type) => {
+        const { session } =
+          await this.shopifyService.shopify.auth.tokenExchange({
+            sessionToken,
+            shop,
+            requestedTokenType: type,
+          });
+
+        request[type] = session;
+        await this.createSession(session);
+      }),
+    );
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -35,13 +82,7 @@ export class AuthGuard implements CanActivate {
 
       if (!sessionToken || !shop) return false;
 
-      const { session } = await this.shopifyService.shopify.auth.tokenExchange({
-        sessionToken,
-        shop,
-        requestedTokenType: RequestedTokenType.OfflineAccessToken,
-      });
-
-      request.session = session;
+      await this.storeSession(sessionToken, shop, request);
 
       return true;
     } catch (er) {
