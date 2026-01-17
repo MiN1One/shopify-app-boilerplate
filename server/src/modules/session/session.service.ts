@@ -12,7 +12,11 @@ export class SessionService {
   ) {}
 
   async createSession(session: Partial<SessionType>) {
-    return await this.sessionModel.create(session);
+    return await this.sessionModel.findOneAndUpdate(
+      { id: session.id },
+      session,
+      { upsert: true, new: true },
+    );
   }
 
   async getSession(session: Partial<SessionType>) {
